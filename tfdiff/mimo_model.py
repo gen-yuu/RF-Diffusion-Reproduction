@@ -37,8 +37,9 @@ def modulate(x, shift, scale):
 class DiffusionEmbedding(nn.Module):
     def __init__(self, max_step, embed_dim=256, hidden_dim=256):
         super().__init__()
-        self.register_buffer('embedding', self._build_embedding(
-            max_step, embed_dim), persistent=False)
+        self.register_buffer(
+            "embedding", self._build_embedding(max_step, embed_dim), persistent=False
+        )
         self.projection = nn.Sequential(
             cm.ComplexLinear(embed_dim, hidden_dim, bias=True),
             cm.ComplexSiLU(),
@@ -64,8 +65,7 @@ class DiffusionEmbedding(nn.Module):
     def _build_embedding(self, max_step, embed_dim):
         steps = torch.arange(max_step).unsqueeze(1)  # [T, 1]
         dims = torch.arange(embed_dim).unsqueeze(0)  # [1, E]
-        table = steps * torch.exp(-math.log(max_step)
-                                  * dims / embed_dim)  # [T, E]
+        table = steps * torch.exp(-math.log(max_step) * dims / embed_dim)  # [T, E]
         table = torch.view_as_real(torch.exp(1j * table))
         return table
 
@@ -77,9 +77,9 @@ class MLPConditionEmbedding(nn.Module):
         self.projection = nn.Sequential(
             cm.ComplexLinear(cond_dim, hidden_dim, bias=True),
             cm.ComplexSiLU(),
-            cm.ComplexLinear(hidden_dim, hidden_dim*4, bias=True),
+            cm.ComplexLinear(hidden_dim, hidden_dim * 4, bias=True),
             cm.ComplexSiLU(),
-            cm.ComplexLinear(hidden_dim*4, hidden_dim, bias=True),
+            cm.ComplexLinear(hidden_dim * 4, hidden_dim, bias=True),
         )
         self.apply(init_weight_norm)
 
@@ -90,8 +90,9 @@ class MLPConditionEmbedding(nn.Module):
 class PositionEmbedding(nn.Module):
     def __init__(self, max_len, input_dim, hidden_dim):
         super().__init__()
-        self.register_buffer('embedding', self._build_embedding(
-            max_len, hidden_dim), persistent=False)
+        self.register_buffer(
+            "embedding", self._build_embedding(max_len, hidden_dim), persistent=False
+        )
         self.projection = cm.ComplexLinear(input_dim, hidden_dim)
         self.apply(init_weight_xavier)
 
@@ -101,9 +102,8 @@ class PositionEmbedding(nn.Module):
 
     def _build_embedding(self, max_len, hidden_dim):
         steps = torch.arange(max_len).unsqueeze(1)  # [P,1]
-        dims = torch.arange(hidden_dim).unsqueeze(0)          # [1,E]
-        table = steps * torch.exp(-math.log(max_len)
-                                  * dims / hidden_dim)     # [P,E]
+        dims = torch.arange(hidden_dim).unsqueeze(0)  # [1,E]
+        table = steps * torch.exp(-math.log(max_len) * dims / hidden_dim)  # [P,E]
         table = torch.view_as_real(torch.exp(1j * table))
         return table
 
@@ -112,17 +112,23 @@ class DiA(nn.Module):
     def __init__(self, hidden_dim, num_heads, dropout, mlp_ratio=4.0, **block_kwargs):
         super().__init__()
         self.norm1 = cm.NaiveComplexLayerNorm(
-            hidden_dim, eps=1e-6, elementwise_affine=False)
+            hidden_dim, eps=1e-6, elementwise_affine=False
+        )
         self.s_attn = cm.ComplexMultiHeadAttention(
-            hidden_dim, hidden_dim, num_heads, dropout, bias=True, **block_kwargs)
+            hidden_dim, hidden_dim, num_heads, dropout, bias=True, **block_kwargs
+        )
         self.norm2 = cm.NaiveComplexLayerNorm(
-            hidden_dim, eps=1e-6, elementwise_affine=False)
+            hidden_dim, eps=1e-6, elementwise_affine=False
+        )
         self.normc = cm.NaiveComplexLayerNorm(
-            hidden_dim, eps=1e-6, elementwise_affine=False)
+            hidden_dim, eps=1e-6, elementwise_affine=False
+        )
         self.x_attn = cm.ComplexMultiHeadAttention(
-            hidden_dim, hidden_dim, num_heads, dropout, bias=True, *block_kwargs)
+            hidden_dim, hidden_dim, num_heads, dropout, bias=True, *block_kwargs
+        )
         self.norm3 = cm.NaiveComplexLayerNorm(
-            hidden_dim, eps=1e-6, elementwise_affine=False)
+            hidden_dim, eps=1e-6, elementwise_affine=False
+        )
         mlp_hidden_dim = int(hidden_dim * mlp_ratio)
         self.mlp = nn.Sequential(
             cm.ComplexLinear(hidden_dim, mlp_hidden_dim, bias=True),
@@ -130,8 +136,7 @@ class DiA(nn.Module):
             cm.ComplexLinear(mlp_hidden_dim, hidden_dim, bias=True),
         )
         self.adaLN_modulation = nn.Sequential(
-            cm.ComplexSiLU(),
-            cm.ComplexLinear(hidden_dim, 6*hidden_dim, bias=True)
+            cm.ComplexSiLU(), cm.ComplexLinear(hidden_dim, 6 * hidden_dim, bias=True)
         )
         self.apply(init_weight_xavier)
         self.adaLN_modulation.apply(init_weight_zero)
@@ -145,17 +150,17 @@ class DiA(nn.Module):
           t, [B, H, 2], \\
           c, [B, N, H, 2], \\
         """
-        shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = self.adaLN_modulation(
-            t).chunk(6, dim=1)
+        shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
+            self.adaLN_modulation(t).chunk(6, dim=1)
+        )
         mod_x = modulate(self.norm1(x), shift_msa, scale_msa)
-        x = x + \
-            gate_msa.unsqueeze(
-                1) * self.s_attn(mod_x, mod_x, mod_x)
-        x = x + self.x_attn(queries=self.normc(c),
-                            keys=self.norm2(x), values=self.norm2(x))
-        x = x + \
-            gate_mlp.unsqueeze(
-                1) * self.mlp(modulate(self.norm3(x), shift_mlp, scale_mlp))
+        x = x + gate_msa.unsqueeze(1) * self.s_attn(mod_x, mod_x, mod_x)
+        x = x + self.x_attn(
+            queries=self.normc(c), keys=self.norm2(x), values=self.norm2(x)
+        )
+        x = x + gate_mlp.unsqueeze(1) * self.mlp(
+            modulate(self.norm3(x), shift_mlp, scale_mlp)
+        )
         return x
 
 
@@ -163,10 +168,10 @@ class FinalLayer(nn.Module):
     def __init__(self, hidden_dim, out_dim):
         super().__init__()
         self.norm = cm.NaiveComplexLayerNorm(
-            hidden_dim, eps=1e-6, elementwise_affine=False)
+            hidden_dim, eps=1e-6, elementwise_affine=False
+        )
         self.adaLN_modulation = nn.Sequential(
-            cm.ComplexSiLU(),
-            cm.ComplexLinear(hidden_dim, 2*hidden_dim, bias=True)
+            cm.ComplexSiLU(), cm.ComplexLinear(hidden_dim, 2 * hidden_dim, bias=True)
         )
         self.linear = cm.ComplexLinear(hidden_dim, out_dim, bias=True)
         self.apply(init_weight_zero)
@@ -206,18 +211,23 @@ class SpatialDiffusion(nn.Module):
         self.task_id = params.task_id
         self.mlp_ratio = params.mlp_ratio
         self.p_embed = PositionEmbedding(
-            self.input_len, self.input_dim, self.hidden_dim)
+            self.input_len, self.input_dim, self.hidden_dim
+        )
         self.t_embed = DiffusionEmbedding(
-            self.max_step, self.embed_dim, self.hidden_dim)
+            self.max_step, self.embed_dim, self.hidden_dim
+        )
         self.c_embed = MLPConditionEmbedding(self.cond_dim, self.hidden_dim)
         # A series of concatenated DiA blocks.
-        self.blocks = nn.ModuleList([
-            DiA(self.hidden_dim, self.num_heads, self.dropout, self.mlp_ratio) for _ in range(self.num_block)
-        ])
+        self.blocks = nn.ModuleList(
+            [
+                DiA(self.hidden_dim, self.num_heads, self.dropout, self.mlp_ratio)
+                for _ in range(self.num_block)
+            ]
+        )
         self.adaMLP = nn.Sequential(
             # Flatten [B, S, A, 2] to [B, S*A, 2]
             nn.Flatten(start_dim=1, end_dim=-2),
-            cm.ComplexLinear(self.input_len*self.hidden_dim, self.output_dim),
+            cm.ComplexLinear(self.input_len * self.hidden_dim, self.output_dim),
             cm.ComplexSiLU(),
             cm.ComplexLinear(self.output_dim, self.output_dim),
         )
@@ -261,15 +271,19 @@ class TimeFrequencyDiffusion(nn.Module):
         self.task_id = params.task_id
         self.mlp_ratio = params.mlp_ratio
         self.p_embed = PositionEmbedding(
-            self.input_len, self.input_dim, self.hidden_dim)
+            self.input_len, self.input_dim, self.hidden_dim
+        )
         self.t_embed = DiffusionEmbedding(
-            self.max_step, self.embed_dim, self.hidden_dim)
+            self.max_step, self.embed_dim, self.hidden_dim
+        )
         self.c_embed = MLPConditionEmbedding(self.cond_dim, self.hidden_dim)
-        self.blocks = nn.ModuleList([
-            DiA(self.hidden_dim, self.num_heads, self.dropout, self.mlp_ratio) for _ in range(self.num_block)
-        ])
-        self.final_layer = FinalLayer(
-            self.hidden_dim, self.output_dim)
+        self.blocks = nn.ModuleList(
+            [
+                DiA(self.hidden_dim, self.num_heads, self.dropout, self.mlp_ratio)
+                for _ in range(self.num_block)
+            ]
+        )
+        self.final_layer = FinalLayer(self.hidden_dim, self.output_dim)
 
     def forward(self, x, t, c):
         x = self.p_embed(x)
@@ -307,13 +321,12 @@ class tfdiff_mimo(nn.Module):
         self.tf_block = TimeFrequencyDiffusion(self.params)
 
     def forward(self, x, t, c):
-        x_s = x.reshape([-1]+self.extra_dim+[2])  # [B*N, S, A, 2] 
-        c_s = c.reshape([-1]+self.cond_dim+[2])  # [B*N, [C], 2]
-        x_s = self.spatial_block(x_s, t.repeat(
-            self.sample_rate), c_s)  # [B*N, S*A, 2]
-        x = x_s.reshape([-1, self.sample_rate] +
-                        [self.spatial_dim, 2])  # [B, N, S*A, 2]
+        x_s = x.reshape([-1] + self.extra_dim + [2])  # [B*N, S, A, 2]
+        c_s = c.reshape([-1] + self.cond_dim + [2])  # [B*N, [C], 2]
+        x_s = self.spatial_block(x_s, t.repeat(self.sample_rate), c_s)  # [B*N, S*A, 2]
+        x = x_s.reshape(
+            [-1, self.sample_rate] + [self.spatial_dim, 2]
+        )  # [B, N, S*A, 2]
         x = self.tf_block(x, t, c)  # [B, N, S*A, 2]
-        x = x.reshape([-1, self.sample_rate] +
-                      self.extra_dim+[2])  # [B, N, S, A, 2]
+        x = x.reshape([-1, self.sample_rate] + self.extra_dim + [2])  # [B, N, S, A, 2]
         return x

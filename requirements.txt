@@ -1,0 +1,8 @@
+torch==2.0.1
+numpy 
+scipy 
+tensorboard 
+tqdm 
+matplotlib 
+torchvision 
+pytorch_fid

@@ -4,18 +4,18 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib
 import scipy.io as scio
-import os;
+import os
 
-data_root = '../data'
-save_root = '../img'
+data_root = "../data"
+save_root = "../img"
 
 import matplotlib
 
-overall_rot_file = os.path.join(data_root, 'exp_overall_fid_wifi.mat')
-sigma = scio.loadmat(overall_rot_file)['data_wifi_sigma']
-ddpm = scio.loadmat(overall_rot_file)['data_wifi_ddpm']
-gan = scio.loadmat(overall_rot_file)['data_wifi_gan'] 
-vae = scio.loadmat(overall_rot_file)['data_wifi_vae'] 
+overall_rot_file = os.path.join(data_root, "exp_overall_fid_wifi.mat")
+sigma = scio.loadmat(overall_rot_file)["data_wifi_sigma"]
+ddpm = scio.loadmat(overall_rot_file)["data_wifi_ddpm"]
+gan = scio.loadmat(overall_rot_file)["data_wifi_gan"]
+vae = scio.loadmat(overall_rot_file)["data_wifi_vae"]
 sigma_std = np.std(sigma)
 sigma_mean = np.mean(sigma)
 ddpm_mean = np.mean(ddpm)
@@ -30,7 +30,9 @@ plt.figure(figsize=(4, 2.5))
 ax = plt.subplot()
 
 # Data
-counts_1, _ = np.histogram(sigma, bins=n_bins, density=True)  # density=True返回每个区间的百分比
+counts_1, _ = np.histogram(
+    sigma, bins=n_bins, density=True
+)  # density=True返回每个区间的百分比
 cdf_1 = np.cumsum(counts_1)
 cdf_1 = cdf_1.astype(float) / cdf_1[-1]
 
@@ -48,31 +50,33 @@ cdf_4 = cdf_4.astype(float) / cdf_4[-1]
 
 
 # seagreen darkorange indianred steelblue
-blue = '#084E87'
-orange = '#ef8a00'
-green = '#267226'
-red = '#BF3F3F'
+blue = "#084E87"
+orange = "#ef8a00"
+green = "#267226"
+red = "#BF3F3F"
 
-plt.plot(n_bins[0:-1], cdf_1, '-', zorder=4,color=blue,linewidth=2, label='RF-Diffusion')
+plt.plot(
+    n_bins[0:-1], cdf_1, "-", zorder=4, color=blue, linewidth=2, label="RF-Diffusion"
+)
 
-plt.plot(n_bins[0:-1], cdf_2, '--', zorder=3, color=orange,linewidth=2,label='DDPM')
+plt.plot(n_bins[0:-1], cdf_2, "--", zorder=3, color=orange, linewidth=2, label="DDPM")
 
-plt.plot(n_bins[0:-1], cdf_3, '-.', zorder=2, color=green,linewidth=2,label='DCGAN')
+plt.plot(n_bins[0:-1], cdf_3, "-.", zorder=2, color=green, linewidth=2, label="DCGAN")
 
-plt.plot(n_bins[0:-1], cdf_4, ':', zorder=1, color=red,linewidth=2,label='CVAE')
+plt.plot(n_bins[0:-1], cdf_4, ":", zorder=1, color=red, linewidth=2, label="CVAE")
 
 # Set ticks grids and labels
-for label in (ax.get_xticklabels() + ax.get_yticklabels()):
+for label in ax.get_xticklabels() + ax.get_yticklabels():
     label.set_fontproperties(font)
     label.set_fontsize(11)
-plt.grid(linestyle='--', linewidth=0.5, zorder=0)
+plt.grid(linestyle="--", linewidth=0.5, zorder=0)
 plt.ylim(0, 1)
 plt.xlim(0, 20.0)
-plt.xlabel('FID', fontproperties=font, verticalalignment='top')
-plt.ylabel('CDF', fontproperties=font, verticalalignment='bottom')
-leg = plt.legend(loc='best', prop={'size': 9})
-leg.get_frame().set_edgecolor('#000000')
+plt.xlabel("FID", fontproperties=font, verticalalignment="top")
+plt.ylabel("CDF", fontproperties=font, verticalalignment="bottom")
+leg = plt.legend(loc="best", prop={"size": 9})
+leg.get_frame().set_edgecolor("#000000")
 leg.get_frame().set_linewidth(0.5)
 plt.tight_layout()
 # plt.show()
-plt.savefig(save_root + '/Fig6(b)-exp-overall-wifi-fid.pdf', dpi=800)
+plt.savefig(save_root + "/Fig6(b)-exp-overall-wifi-fid.pdf", dpi=800)
