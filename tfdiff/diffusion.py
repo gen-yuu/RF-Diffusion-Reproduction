@@ -425,6 +425,7 @@ class GaussianDiffusion(nn.Module):
         x_0_hat = restore_fn(x_s, batch_max, cond)
         return x_0_hat
 
+    # ! 生成ではなく、再構成（Reconstruction）
     def native_sampling(self, restore_fn, data, cond, device):
         batch_size = cond.shape[0]
         batch_max = (self.max_step - 1) * torch.ones(batch_size, dtype=torch.int64)

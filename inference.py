@@ -195,6 +195,7 @@ def save_mimo(out_dir, data, pred, cond, batch, index=0):
 
 
 def save_wifi(out_dir, data, pred, cond, batch, index=0):
+    os.makedirs("./dataset/wifi/output/", exist_ok=True)
     scio.savemat(f"./dataset/wifi/output/{batch}-{index}.mat", {"pred": pred.numpy()})
     os.makedirs("./dataset/wifi/img/", exist_ok=True)
     os.makedirs("./dataset/wifi/img_matric/data", exist_ok=True)
@@ -257,6 +258,7 @@ def save_wifi(out_dir, data, pred, cond, batch, index=0):
 
 
 def save_fmcw(out_dir, data, pred, cond, batch, index=0):
+    os.makedirs("./dataset/fmcw/output/", exist_ok=True)
     scio.savemat(f"./dataset/fmcw/output/{batch}-{index}.mat", {"pred": pred.numpy()})
     os.makedirs("./dataset/fmcw/img/", exist_ok=True)
     os.makedirs("./dataset/fmcw/img_matric/data", exist_ok=True)
@@ -332,6 +334,7 @@ def print_fid(out_dir, data_dir, task_id):
     generated_images_folder = out_dir
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dims = 192
+    # ! 論文に記載のない係数がかけられている
     # 计算FID距离值
     if task_id == 0:
         corr = 1.9
@@ -397,6 +400,7 @@ def main(args):
             data = features["data"]
             cond = features["cond"]
 
+            # ! 正解データから復元しているだけでは？
             if args.task_id in [0, 1]:
                 # pred = diffusion.sampling(model, cond, device)
                 # pred = diffusion.robust_sampling(model, cond, device)
